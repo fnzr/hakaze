@@ -1,4 +1,5 @@
 from bs4 import BeautifulSoup
+import re
 
 
 def get_soup(url) -> BeautifulSoup:
@@ -6,21 +7,18 @@ def get_soup(url) -> BeautifulSoup:
         return BeautifulSoup(f.read(), "html.parser")
 
 
-""""
-function category(dom: CheerioStatic) {
-    return dom("#gdc").text();
-}
-
-function originalTitle(dom: CheerioStatic) {
-    return dom("#gd2 #gj").text();
-}
-
-function length(dom: CheerioStatic) {
-    const table = dom("#gdd table");
-    const value = table.find("tr").eq(5).children(".gdt2").text();
-    return Number(value.split(' ')[0]);
-}
-"""
+def parse_tags(soup):
+    divs = soup.select("#taglist tbody div")
+    tags = {}
+    for div in divs:
+        parts = (div["id"][3:]).split(":")[::-1]
+        if parts[0] not in tags:
+            tags[parts[0]] = []
+        if len(parts) == 1:
+            tags[parts[0]].append("misc")
+        else:
+            tags[parts[0]].append(parts[1])
+    return tags
 
 
 def load_overview(url):
@@ -30,8 +28,15 @@ def load_overview(url):
 
     lengthStr = soup.select_one("#gdd tr:nth-child(6) td:nth-child(2)").text
     length = lengthStr.split(" ")[0]
-    print(title, original_title, length)
+
+    regex = re.compile("\/g\/([\d\w]+)\/([\d\w]+)")
+    match = regex.search(url)
+    if match.lastindex < 2:
+        raise ValueError(f"Could not parse dir from [{url}]")
+    dirname = f"{match.group(1)}.{match.group(2)}"
+
+    tags = parse_tags(soup)
 
 
-load_overview("")
+# print(match.group(1))
 
