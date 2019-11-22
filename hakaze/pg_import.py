@@ -4,7 +4,6 @@ import re
 import pymongo
 
 mongo_uri = os.getenv("MONGO_URI")
-client = pymongo.MongoClient(mongo_uri)
 
 
 def gallery_and_page_pg_json():
@@ -19,8 +18,8 @@ def gallery_and_page_pg_json():
             name, number = page.split("|")
             parsed_pages[number] = name
         g["pages"] = parsed_pages
-        g["_id"] = g["id"]
-        del g["id"]
+        g["_id"] = g["dir"]
+        del g["dir"]
         all_galleries.append(g)
         # break
 
@@ -36,9 +35,11 @@ def tags_pg_json():
             entries[tag["name"]] = {"_id": tag["name"]}
         if tag["group"] not in entries[tag["name"]]:
             entries[tag["name"]][tag["group"]] = []
-        entries[tag["name"]][tag["group"]].append(tag["id"])
+        gallery = client.hakaze.galleries.find_one({"id": tag["id"]})
+        entries[tag["name"]][tag["group"]].append(gallery["_id"])
 
     client.hakaze.tags.insert_many(entries.values())
+    #client.hakaze.galleries.update_many({}, {'$unset': {'id': True}})
 
 
 def sync_gallery_tags():
@@ -82,3 +83,15 @@ def break_piped_tags():
             for gid in gids:
                 tag_entry[group].append(gid)
         client.hakaze.tags.update_one({"_id": _id}, {"$set": tag_entry}, upsert=True)
+    client.hakaze.tags.delete_many({"_id": re.compile(r"\|")})
+
+
+def _id_to_dir():
+    galleries = client.hakaze.galleries.find()
+    for gallery in galleries:
+        new_gallery = gallery
+        new_gallery["_id"] = gallery["dir"]
+        new_gallery["old_id"] = gallery["_id"]
+        del new_gallery["dir"]
+        client.hakaze.galleries.delete_one({"_id": gallery["_id"]})
+        client.hakaze.galleries.insert_one(new_gallery)
