@@ -1,10 +1,127 @@
-from bs4 import BeautifulSoup
 import re
+import os
+import datetime
+import threading
+import logging
+import shutil
+import requests
+from bs4 import BeautifulSoup
+import pymongo
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
+SOFT_LIMIT = 3500
+ESTIMATED_PAGE_COST = 15
+BATCH_JOBS = 30
+COOLDOWN_HOURS = 2
+
+session = requests.session()
+session.headers.update({
+    'User-Agent': (
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+        ' AppleWebKit/537.36 (KHTML, like Gecko)'
+        ' Chrome/74.0.3729.169 Safari/537.36'
+        )
+})
+
+session.cookies = requests.utils.cookiejar_from_dict({
+    'ipb_pass_hash': os.getenv('IPB_PASS_HASH'),
+    'ipb_member_id': os.getenv('IPB_MEMBER_ID')
+})
+
+def get_soup(url, params=None) -> BeautifulSoup:
+    response = session.get(url, params=params)
+    if response.status_code == 200:
+        return BeautifulSoup(response.content, 'html.parser')
+    raise ValueError(f"Request for [{url}] returned with status [{response.status_code}]")
+    #with open("/mnt/c/temp/cero.html") as f:
+        #return BeautifulSoup(f.read(), "html.parser")
 
 
-def get_soup(url) -> BeautifulSoup:
-    with open("/mnt/c/temp/laserflip.html") as f:
-        return BeautifulSoup(f.read(), "html.parser")
+
+def get_current_limit():
+    soup = get_soup('https://e-hentai.org/home.php')
+    return int(soup.select_one('.homebox p strong').text)
+
+
+def download_image(job):
+    try:
+
+        soup = get_soup(job['url'])
+        try:
+            image_url = soup.select_one('#i7 a')['href']
+            filename = None
+        except ValueError:
+            image_url = soup.select_one('#i3 img')['src']
+            filename = image_url.split('/')[-1]
+        logger.debug(
+            'Obtained URL for Gallery [%s], page [%d]: %s',
+            job['gallery_id'], job['page'],
+            image_url
+        )
+        response = session.get(image_url, stream=True)
+        expected_size = int(response.headers['Content-Length'])
+        if filename is None:
+            filename = response.headers['Content-Disposition'].split('=')[1]
+
+        target_dir = os.path.join(os.getenv('VAULT_ROOT'), job['gallery_id'])
+        os.makedirs(target_dir, exist_ok=True)
+        filepath = os.path.join(target_dir, filename)
+        with open(filepath, 'wb') as out:
+            shutil.copyfileobj(response.raw, out)
+        response.close()
+        if os.path.getsize(filepath) != expected_size:
+            return False
+        client.hakaze.galleries.update_one({'_id': job['gallery_id']}, {'$set': {f"pages.{job['page']}": filename}})
+    except Exception as e:
+        logger.error(e)
+        return False
+
+def process_queued_jobs():
+    now = datetime.datetime.now()
+    queued_jobs = list(client.hakaze.dl_queue.find({"scheduled": {"$lte": now}}))
+    current_limit = get_current_limit()
+    if SOFT_LIMIT > current_limit + (ESTIMATED_PAGE_COST * len(queued_jobs)):
+        threading.Timer(datetime.timedelta(hours=COOLDOWN_HOURS)).start()
+        logger.info(
+            "Reached soft limit at %d points. Stopping for %d hours",
+            current_limit,
+            COOLDOWN_HOURS,
+        )
+        return
+    for job in queued_jobs:
+        success = download_image(job)
+        if success:
+            message = "Done gallery [%s] page [%d]"
+            client.hakaze.dl_queue.delete_one({"_id": job["_id"]})
+        else:
+            message = "Failed gallery [%s] page [%d]. Trying again after delay."
+            next_schedule = now + datetime.timedelta(minutes=10)
+            client.hakaze.dl_queue.update_one(
+                {"_id": job["_id"]}, {"$set": {"scheduled": next_schedule}}
+            )
+        logger.debug(message, job["gallery_id"], job["page"])
+
+
+def queue_pages(url, gallery_id, max_chapter):
+    now = datetime.datetime.now()
+    for chapter in range(1, max_chapter + 1):
+        pages = []
+        soup = get_soup(url, {'p': chapter})
+        for a in soup.select("#gdt .gdtl a"):
+            pages.append(
+                {
+                    "gallery_id": gallery_id,
+                    "page": int(a.img["alt"]),
+                    "url": a["href"],
+                    "scheduled": now,
+                }
+            )
+        client.hakaze.dl_queue.insert_many(pages)
+        break
+    # call prepare_downloads on another thread
+    return
 
 
 def parse_tags(soup):
@@ -18,25 +135,49 @@ def parse_tags(soup):
             tags[parts[0]].append("misc")
         else:
             tags[parts[0]].append(parts[1])
-    return tags
+    gallery_tags = {}
+    for tag, group in tags.items():
+        for item in group:
+            if item not in gallery_tags:
+                gallery_tags[item] = []
+            gallery_tags[item].append(tag)
+    return tags, gallery_tags
 
 
-def load_overview(url):
-    soup = get_soup(url)
-    title = soup.select_one("#gn").text
-    original_title = soup.select_one("#gj").text
-
-    lengthStr = soup.select_one("#gdd tr:nth-child(6) td:nth-child(2)").text
-    length = lengthStr.split(" ")[0]
-
-    regex = re.compile("\/g\/([\d\w]+)\/([\d\w]+)")
+def save_gallery(url):
+    regex = re.compile(r"\/g\/([\d\w]+)\/([\d\w]+)")
     match = regex.search(url)
     if match.lastindex < 2:
         raise ValueError(f"Could not parse dir from [{url}]")
-    dirname = f"{match.group(1)}.{match.group(2)}"
+    now = datetime.datetime.now()
+    gallery = {
+        "_id": f"{match.group(1)}.{match.group(2)}",
+        "url": url,
+        "created": now,
+        "updated": now,
+    }
 
-    tags = parse_tags(soup)
+    soup = get_soup(url)
+    gallery["title"] = soup.select_one("#gn").text
+    gallery["original_title"] = soup.select_one("#gj").text
 
+    lengthStr = soup.select_one("#gdd tr:nth-child(6) td:nth-child(2)").text
+    gallery["length"] = int(lengthStr.split(" ")[0])
 
-# print(match.group(1))
+    tag_index, gallery["tags"] = parse_tags(soup)
 
+    gallery["category"] = soup.select_one("#gdc").text.lower()
+
+    client.hakaze.galleries_dev.update_one(
+        {"_id": gallery["_id"]}, {"$set": gallery}, upsert=True
+    )
+    for tag, groups in tag_index.items():
+        push = {}
+        for group in groups:
+            push[group] = gallery["_id"]
+        print(push)
+        client.hakaze.tags_dev.update_one(
+            {"_id": tag}, {"$set": {"_id": tag}, "$push": push}, upsert=True
+        )
+    max_chapter = int(soup.select_one(".ptt td:nth-last-child(2)").text)
+    queue_pages(url, gallery['_id'], max_chapter)
