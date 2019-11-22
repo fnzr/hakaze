@@ -6,7 +6,7 @@ root = Blueprint("root", __name__)
 
 @root.route("/covers", methods=["POST"])
 def covers():
-    data = request.json
+    data = request.get_json(force=True)
     limit = data["limit"] if "limit" in data else 20
     skip = data["offset"] if "offset" in data else 0
     pipeline = [

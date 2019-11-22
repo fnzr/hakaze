@@ -2,3 +2,4 @@ requests
 pymongo
 flask
 Flask-PyMongo
+bs4
