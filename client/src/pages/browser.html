@@ -1,6 +1,21 @@
 <template>
     <require from="./navigation.css"></require>
     <require from="./browser.css"></require>
+    <require from="./pages.css"></require>
+    <div class="top-box">
+        <div if.bind="showSearchBox">
+            <input id="filter" type="text" placeholder="Search Keywords" size="50" value.bind="filter" />
+            <input class="btn" type="button" value="Search" click.delegate="search()" />
+            <input class="btn" type="button" value="Clear Filter" click.delegate="filter = ''" />
+            <input class="btn" type="button" value="Hide search" click.delegate="showSearchBox = false" />
+            <div>
+                <p class="counter">Showing ${galleryCount} results</p>
+            </div>
+        </div>
+        <div else>
+            <input class="btn" type="button" value="Show search" click.delegate="showSearchBox = true" />
+        </div>
+    </div>
     <div style="display:flex;">
         <button class="button-page" click.delegate="requestCovers(false)">&lt;</button>
         <div id="pages-container">

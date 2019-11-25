@@ -5,4 +5,8 @@ const api = axios.create({
 });
 axios.defaults.headers.post['Content-Type'] = 'application/json';
 
+export function url_for(filepath) {
+    return filepath ? '/vault/' + filepath : '';
+}
+
 export default api;

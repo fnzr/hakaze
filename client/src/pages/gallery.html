@@ -1,0 +1,17 @@
+<template>
+    <require from="./navigation.css"></require>
+    <require from="./pages.css"></require>
+    <div style="display:flex;">
+        <button class="button-page" click.delegate="requestPages(false)">&lt;</button>
+        <div id="pages-container">
+            <template repeat.for="page of pages">
+                <div class="cover-container" pointerup.delegate="onPointerUp($event)">
+                    <div class="cover-image">
+                        <img src.one-way="url_for(page)" />
+                    </div>
+                </div>
+            </template>
+        </div>
+        <button class="button-page" click.delegate="requestPages(true)">&gt;</button>
+    </div>
+</template>
