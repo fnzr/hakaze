@@ -17,7 +17,7 @@ def covers():
                 "title": True,
                 "category": True,
                 "length": True,
-                "path": {"$concat": ["$dir", "/", "$pages.1"]},
+                "path": {"$concat": ["$_id", "/", "$pages.1"]},
             }
         },
     ]

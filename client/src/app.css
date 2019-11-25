@@ -1,0 +1,10 @@
+body {
+    background: #34353b;
+    margin: 0px;
+}
+
+#app {
+    font-size: 8pt;
+    font-family: arial, helvetica, sans-serif;
+    color: #f1f1f1;
+}
