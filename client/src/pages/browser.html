@@ -17,7 +17,7 @@
         </div>
     </div>
     <div style="display:flex;">
-        <button class="button-page" click.delegate="requestCovers(false)">&lt;</button>
+        <button class="button-page" click.delegate="changeChapter(false)">&lt;</button>
         <div id="pages-container">
             <template repeat.for="cover of covers">
                 <div class="cover-container" dir.one-way="cover._id" pointerdown.delegate="onPointerDown($event)"
@@ -33,6 +33,6 @@
                 </div>
             </template>
         </div>
-        <button class="button-page" click.delegate="requestCovers(true)">&gt;</button>
+        <button class="button-page" click.delegate="changeChapter(true)">&gt;</button>
     </div>
 </template>

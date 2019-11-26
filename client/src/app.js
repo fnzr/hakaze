@@ -6,7 +6,7 @@ export class App {
         this.router = router;
         config.map([
             { route: ['gallery/:dir'], name: 'gallery', moduleId: PLATFORM.moduleName('pages/gallery'), title: 'Hakaze' },
-            { route: [''], name: 'browser', moduleId: PLATFORM.moduleName('pages/browser'), title: 'Hakaze' },
+            { route: ['/:chapter?'], name: 'browser', moduleId: PLATFORM.moduleName('pages/browser'), title: 'Hakaze' },
         ]);
     }
 }

@@ -118,7 +118,7 @@ module.exports = ({ production } = {}, { extractCss, analyze, tests, hmr, port, 
                 }
             },
             '/vault': {
-                target: 'http://vault.sasuga.link',
+                target: 'http://vault.sasuga.link:880',
                 pathRewrite: {
                     '^/vault': ''
                 }

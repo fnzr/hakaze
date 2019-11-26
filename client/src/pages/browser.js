@@ -2,39 +2,49 @@ import api, { url_for } from '../api';
 
 export default class Browser {
 
-    firstCover = -9
-    galleryCount = 0;
     filter = '';
+    chapter = 1;
+    lastChapter = 0;
 
     constructor() {
         this.covers = []
-        this.requestCovers(true)
-        this.getGalleryCount()
         this.url_for = url_for
+    }
+
+    activate(data) {
+        const chapter = data.chapter ? Number(data.chapter) : 1;
+        this.search(chapter);
     }
 
     async getGalleryCount() {
         const response = await api.post('count-galleries');
-        this.galleryCount = response.data.count;
+        this.lastChapter = Math.ceil(response.data.count / 9);
     }
 
-    async requestCovers(forward) {
-        if (!forward && this.firstCover == 0 ||
-            forward && this.firstCover >= this.galleryCount) {
-            return;
-        }
-        this.firstCover += (forward ? +1 : -1) * 9;
+    async requestCovers() {
         this.covers.splice(0, 9);
         const response = await api.post('covers', {
-            'offset': this.firstCover,
+            'offset': (this.chapter - 1) * 9,
             'limit': 9
         })
         this.covers.push(...response.data)
     }
 
-    search() {
+    changeChapter(forward) {
+        if ((forward && this.chapter >= this.lastChapter)
+            || (!forward && this.chapter <= 1)) {
+            return;
+        }
+        this.chapter += forward ? +1 : -1;
+        this.requestCovers();
+    }
+
+    async search(chapter) {
         //TODO search lol
         console.log('Searching: ' + this.filter);
+        await this.getGalleryCount()
+        this.chapter = chapter;
+        this.requestCovers()
     }
 
     onPointerDown(e) {
@@ -45,7 +55,7 @@ export default class Browser {
         e.path.some((el) => {
             if (el.classList.contains('cover-container')) {
                 const dir = el.getAttribute('dir')
-                console.log("Found: " + dir);
+                window.open(`#/gallery/${dir}`, '_blank');
                 return true;
             }
         })
