@@ -1,3 +1,4 @@
+import screenfull from 'screenfull';
 import api, { url_for } from '../api';
 
 export default class Gallery {
@@ -7,9 +8,38 @@ export default class Gallery {
     shownPages = []
     chapter = 1;
     lastChapter = 0;
+    fullscreenPage = 0;
     gallery = {
         length: 0
     }
+
+    fullscreen = {
+        close: () => screenfull.exit(),
+
+        next: () => {
+            if (this.gallery.length <= this.fullscreenPage) {
+                return;
+            }
+            this.fullscreenPage++;
+        },
+
+        previous: () => {
+            if (this.fullscreenPage == 1) {
+                return;
+            }
+            this.fullscreenPage--;
+        }
+    }
+
+    constructor() {
+        screenfull.on('change', () => {
+            if (!document.fullscreenElement) {
+                this.showChapter(Math.ceil(this.fullscreenPage / 9))
+                this.fullscreenPage = 0
+            }
+        })
+    }
+
 
     activate(data, routeConfig) {
         this.dir = data.dir;
@@ -47,10 +77,14 @@ export default class Gallery {
         this.chapter = chapter;
         const offset = (chapter - 1) * 9;
         this.shownPages.splice(0, 9);
-        for (let i = 1; i <= 9; i++) {
+        const limit = Math.min(9, this.gallery.length - offset)
+        for (let i = 1; i <= limit; i++) {
             const key = i + offset;
             const value = (key in this.pages) ? this.pages[key] : ''
-            this.shownPages.push(value);
+            this.shownPages.push({
+                'num': key,
+                'url': value
+            });
         }
     }
 
@@ -61,5 +95,16 @@ export default class Gallery {
         }
         const nextChapter = this.chapter + (forward ? +1 : -1);
         this.showChapter(nextChapter);
+    }
+
+    onPointerUp(e) {
+        e.path.some(el => {
+            if (el.classList.contains('cover-container')) {
+                const pageNumber = el.getAttribute('data-page')
+                this.fullscreenPage = Number(pageNumber);
+                screenfull.request(document.getElementById('fullscreen'));
+                return true;
+            }
+        })
     }
 }
