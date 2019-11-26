@@ -17,7 +17,7 @@ def covers():
                 "title": True,
                 "category": True,
                 "length": True,
-                "path": {"$concat": ["$_id", "/", "$pages.1"]},
+                "path": {"$concat": ["$_id", "/", {"$arrayElemAt": [ "$pages", 0 ]}]},
             }
         },
     ]
@@ -36,7 +36,7 @@ def pages():
             "$project": {
                 "filenames": {
                     "$map": {
-                        "input": {"$slice": ["$pages_ar", skip, limit]},
+                        "input": {"$slice": ["$pages", skip, limit]},
                         "as": "page",
                         "in": {"$concat": ["$_id", "/", "$$page",]},
                     }
@@ -60,7 +60,7 @@ def count_galleries():
 @root.route("/gallery/<gallery_id>", methods=["GET"])
 def gallery_data(gallery_id):
     gallery = mongo.db.galleries.find_one(
-        {"_id": gallery_id}, {"_id": False, "pages": False, "pages_ar": False}
+        {"_id": gallery_id}, {"_id": False, "pages": False}
     )
     result = {} if gallery is None else gallery
     return jsonify(result)
