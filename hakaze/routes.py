@@ -34,20 +34,33 @@ def pages():
         {"$match": {"_id": data["dir"]}},
         {
             "$project": {
-                "pages": {
+                "filenames": {
                     "$map": {
                         "input": {"$slice": ["$pages_ar", skip, limit]},
                         "as": "page",
-                        "in": {"$concat": ["$_id", "/", "$$page"]},
+                        "in": {"$concat": ["$_id", "/", "$$page",]},
                     }
                 }
             }
         },
     ]
-    return jsonify(mongo.db.galleries.aggregate(pipeline).next()["pages"])
+    filenames = mongo.db.galleries.aggregate(pipeline).next()["filenames"]
+    result = {}
+    for index, filename in enumerate(filenames):
+        result[index + skip + 1] = filename
+    return jsonify(result)
 
 
 @root.route("/count-galleries", methods=["POST"])
 def count_galleries():
     pipeline = [{"$count": "count"}]
     return jsonify(mongo.db.galleries.aggregate(pipeline).next())
+
+
+@root.route("/gallery/<gallery_id>", methods=["GET"])
+def gallery_data(gallery_id):
+    gallery = mongo.db.galleries.find_one(
+        {"_id": gallery_id}, {"_id": False, "pages": False, "pages_ar": False}
+    )
+    result = {} if gallery is None else gallery
+    return jsonify(result)
