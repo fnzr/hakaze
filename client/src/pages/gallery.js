@@ -69,7 +69,7 @@ export default class Gallery {
         })
         this.lastLoadedPage = offset + limit;
         for (const key in response.data) {
-            this.pages[Number(key)] = url_for(response.data[key]);
+            this.pages[Number(key)] = response.data[key];
         }
     }
 
@@ -83,7 +83,7 @@ export default class Gallery {
             const value = (key in this.pages) ? this.pages[key] : ''
             this.shownPages.push({
                 'num': key,
-                'url': value
+                'url': url_for(['thumb', '300,fit', value])
             });
         }
     }

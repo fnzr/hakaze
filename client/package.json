@@ -10,7 +10,8 @@
         "aurelia-animator-css": "^1.0.4",
         "aurelia-bootstrapper": "^2.3.2",
         "axios": "^0.19.0",
-        "screenfull": "^5.0.0"
+        "screenfull": "^5.0.0",
+        "url-join": "^4.0.1"
     },
     "devDependencies": {
         "@babel/core": "^7.4.0",

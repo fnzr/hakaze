@@ -18,7 +18,7 @@
     <div if.bind="fullscreenPage != 0">
         <div id="fullscreen">
             <div class="main">
-                <img src.one-way="pages[fullscreenPage]" />
+                <img src.one-way="url_for([pages[fullscreenPage]])" />
             </div>
             <div class="previous" click.delegate="fullscreen.previous()"></div>
             <div class="next" click.delegate="fullscreen.next()"></div>
