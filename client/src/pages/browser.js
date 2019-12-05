@@ -26,7 +26,10 @@ export default class Browser {
             'skip': (this.chapter - 1) * 9,
             'limit': 9
         })
-        this.covers.push(...response.data)
+        this.covers.push(...(response.data.map(cover => {
+            cover['url'] = `/thumb/300,fit/${cover.path}`
+            return cover;
+        })))
     }
 
     changeChapter(forward) {
