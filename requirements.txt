@@ -4,3 +4,5 @@ flask
 Flask-PyMongo
 bs4
 python-dotenv
+uvicorn
+fastapi

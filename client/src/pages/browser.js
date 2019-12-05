@@ -1,4 +1,4 @@
-import api, { url_for } from '../api';
+import api from '../api';
 
 export default class Browser {
 
@@ -8,7 +8,6 @@ export default class Browser {
 
     constructor() {
         this.covers = []
-        this.url_for = url_for
     }
 
     activate(data) {
@@ -24,7 +23,7 @@ export default class Browser {
     async requestCovers() {
         this.covers.splice(0, 9);
         const response = await api.post('covers', {
-            'offset': (this.chapter - 1) * 9,
+            'skip': (this.chapter - 1) * 9,
             'limit': 9
         })
         this.covers.push(...response.data)

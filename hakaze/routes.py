@@ -1,42 +1,48 @@
-from flask import Blueprint, request, jsonify
-from hakaze import mongo
+import os
+from pydantic import BaseModel
+from fastapi import APIRouter
+from .database import db
 
-root = Blueprint("root", __name__)
+router = APIRouter()
 
 
-@root.route("/covers", methods=["POST"])
-def covers():
-    data = request.get_json(force=True)
-    limit = data["limit"] if "limit" in data else 20
-    skip = data["offset"] if "offset" in data else 0
+class PagesArgs(BaseModel):
+    dir: str
+    skip = 0
+    limit = 20
+
+
+class CoverArgs(BaseModel):
+    skip = 0
+    limit = 20
+
+
+@router.post("/covers")
+def covers(args: CoverArgs):
     pipeline = [
-        {"$skip": skip},
-        {"$limit": limit},
+        {"$skip": args.skip},
+        {"$limit": args.limit},
         {
             "$project": {
                 "title": True,
                 "category": True,
                 "length": True,
-                "path": {"$concat": ["$_id", "/", {"$arrayElemAt": [ "$pages", 0 ]}]},
+                "path": {"$concat": ["$_id", "/", {"$arrayElemAt": ["$pages", 0]}]},
             }
         },
     ]
-    return jsonify(list(mongo.db.galleries.aggregate(pipeline)))
+    return list(db.galleries.aggregate(pipeline))
 
 
-@root.route("/pages", methods=["POST"])
-def pages():
-    data = request.get_json(force=True)
-    limit = data["limit"] if "limit" in data else 20
-    skip = data["offset"] if "offset" in data else 0
-
+@router.post("/pages")
+def pages(args: PagesArgs):
     pipeline = [
-        {"$match": {"_id": data["dir"]}},
+        {"$match": {"_id": args.dir}},
         {
             "$project": {
                 "filenames": {
                     "$map": {
-                        "input": {"$slice": ["$pages", skip, limit]},
+                        "input": {"$slice": ["$pages", args.skip, args.limit]},
                         "as": "page",
                         "in": {"$concat": ["$_id", "/", "$$page",]},
                     }
@@ -44,23 +50,26 @@ def pages():
             }
         },
     ]
-    filenames = mongo.db.galleries.aggregate(pipeline).next()["filenames"]
+    filenames = {}
+    try:
+        filenames = db.galleries.aggregate(pipeline).next()["filenames"]
+    except StopIteration:
+        pass
     result = {}
     for index, filename in enumerate(filenames):
-        result[index + skip + 1] = filename
-    return jsonify(result)
+        result[index + args.skip + 1] = filename
+    return result
 
 
-@root.route("/count-galleries", methods=["POST"])
+@router.post("/count-galleries")
 def count_galleries():
     pipeline = [{"$count": "count"}]
-    return jsonify(mongo.db.galleries.aggregate(pipeline).next())
+    result = db.galleries.aggregate(pipeline).next()
+    return result if result is not None else {}
 
 
-@root.route("/gallery/<gallery_id>", methods=["GET"])
-def gallery_data(gallery_id):
-    gallery = mongo.db.galleries.find_one(
-        {"_id": gallery_id}, {"_id": False, "pages": False}
-    )
+@router.get("/gallery/{gallery_id}")
+def gallery_data(gallery_id: str):
+    gallery = db.galleries.find_one({"_id": gallery_id}, {"_id": False, "pages": False})
     result = {} if gallery is None else gallery
-    return jsonify(result)
+    return result

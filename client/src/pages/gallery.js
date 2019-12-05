@@ -1,5 +1,6 @@
 import screenfull from 'screenfull';
-import api, { url_for } from '../api';
+import urljoin from 'url-join';
+import api from '../api';
 
 export default class Gallery {
 
@@ -40,7 +41,6 @@ export default class Gallery {
         })
     }
 
-
     activate(data, routeConfig) {
         this.dir = data.dir;
         this.requestGalleryData().then(async () => {
@@ -49,7 +49,6 @@ export default class Gallery {
             await this.requestPages(0, 50)
             this.showChapter(1)
         })
-        this.url_for = url_for
     }
 
     async requestGalleryData() {
@@ -63,7 +62,7 @@ export default class Gallery {
             return
         }
         const response = await api.post('pages', {
-            'offset': offset,
+            'skip': offset,
             'limit': limit,
             'dir': this.dir
         })
@@ -83,7 +82,7 @@ export default class Gallery {
             const value = (key in this.pages) ? this.pages[key] : ''
             this.shownPages.push({
                 'num': key,
-                'url': url_for(['thumb', '300,fit', value])
+                'url': urljoin('/thumb', '300,fit', value)
             });
         }
     }

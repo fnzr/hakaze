@@ -112,10 +112,10 @@ module.exports = ({ production } = {}, { extractCss, analyze, tests, hmr, port, 
         host: host,
         proxy: {
             '/api': {
-                target: 'http://localhost:5000',
-                pathRewrite: {
-                    '^/api': ''
-                }
+                target: 'http://localhost:5000'
+            },
+            '/thumb': {
+                target: 'http://localhost:5000'
             },
             '/vault': {
                 target: 'http://vault.sasuga.link:880',
