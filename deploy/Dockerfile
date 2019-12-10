@@ -1,5 +1,5 @@
 #Context of this file should be ../
-FROM nginx
+FROM python:3.6
 
 WORKDIR /app
 
