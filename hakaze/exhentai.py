@@ -7,6 +7,7 @@ import shutil
 import requests
 from bs4 import BeautifulSoup
 import pymongo
+from .database import db
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -47,12 +48,11 @@ def get_current_limit():
 
 def download_image(job):
     try:
-
         soup = get_soup(job['url'])
         try:
             image_url = soup.select_one('#i7 a')['href']
             filename = None
-        except ValueError:
+        except TypeError:
             image_url = soup.select_one('#i3 img')['src']
             filename = image_url.split('/')[-1]
         logger.debug(
@@ -71,19 +71,22 @@ def download_image(job):
         with open(filepath, 'wb') as out:
             shutil.copyfileobj(response.raw, out)
         response.close()
-        if os.path.getsize(filepath) != expected_size:
-            return False
-        client.hakaze.galleries.update_one({'_id': job['gallery_id']}, {'$set': {f"pages.{job['page']}": filename}})
+        real_size = os.path.getsize(filepath)
+        if real_size != expected_size:
+            raise ValueError(("Downloaded file does not have expected size. ",
+                f"Expected: {expected_size}. Real: {real_size}"))
+        db.galleries.update_one({'_id': job['gallery_id']}, {'$set': {f"pages.{job['page']}": filename}})
+        return True
     except Exception as e:
         logger.error(e)
         return False
 
 def process_queued_jobs():
     now = datetime.datetime.now()
-    queued_jobs = list(client.hakaze.dl_queue.find({"scheduled": {"$lte": now}}))
+    queued_jobs = list(db.dl_queue.find({"scheduled": {"$lte": now}}).limit(50))
     current_limit = get_current_limit()
-    if SOFT_LIMIT > current_limit + (ESTIMATED_PAGE_COST * len(queued_jobs)):
-        threading.Timer(datetime.timedelta(hours=COOLDOWN_HOURS)).start()
+    if SOFT_LIMIT < current_limit + (ESTIMATED_PAGE_COST * len(queued_jobs)):
+        threading.Timer(datetime.timedelta(hours=COOLDOWN_HOURS).total_seconds(), process_queued_jobs).start()
         logger.info(
             "Reached soft limit at %d points. Stopping for %d hours",
             current_limit,
@@ -94,19 +97,21 @@ def process_queued_jobs():
         success = download_image(job)
         if success:
             message = "Done gallery [%s] page [%d]"
-            client.hakaze.dl_queue.delete_one({"_id": job["_id"]})
+            db.dl_queue.delete_one({"_id": job["_id"]})
         else:
             message = "Failed gallery [%s] page [%d]. Trying again after delay."
             next_schedule = now + datetime.timedelta(minutes=10)
-            client.hakaze.dl_queue.update_one(
+            db.dl_queue.update_one(
                 {"_id": job["_id"]}, {"$set": {"scheduled": next_schedule}}
             )
         logger.debug(message, job["gallery_id"], job["page"])
+    if len(queued_jobs) > 0:
+        threading.Timer(datetime.timedelta(minutes=1).total_seconds(), process_queued_jobs).start()
 
 
 def queue_pages(url, gallery_id, max_chapter):
     now = datetime.datetime.now()
-    for chapter in range(1, max_chapter + 1):
+    for chapter in range(max_chapter):
         pages = []
         soup = get_soup(url, {'p': chapter})
         for a in soup.select("#gdt .gdtl a"):
@@ -118,9 +123,8 @@ def queue_pages(url, gallery_id, max_chapter):
                     "scheduled": now,
                 }
             )
-        client.hakaze.dl_queue.insert_many(pages)
-        break
-    # call prepare_downloads on another thread
+        db.dl_queue.insert_many(pages)
+    threading.Timer(1, process_queued_jobs).start()
     return
 
 
@@ -168,7 +172,7 @@ def save_gallery(url):
 
     gallery["category"] = soup.select_one("#gdc").text.lower()
 
-    client.hakaze.galleries_dev.update_one(
+    db.galleries.update_one(
         {"_id": gallery["_id"]}, {"$set": gallery}, upsert=True
     )
     for tag, groups in tag_index.items():
@@ -176,7 +180,7 @@ def save_gallery(url):
         for group in groups:
             push[group] = gallery["_id"]
         print(push)
-        client.hakaze.tags_dev.update_one(
+        db.tags.update_one(
             {"_id": tag}, {"$set": {"_id": tag}, "$push": push}, upsert=True
         )
     max_chapter = int(soup.select_one(".ptt td:nth-last-child(2)").text)
