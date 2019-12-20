@@ -6,7 +6,6 @@ import logging
 import shutil
 import requests
 from bs4 import BeautifulSoup
-import pymongo
 from .database import db
 
 logger = logging.getLogger(__name__)
@@ -18,75 +17,92 @@ BATCH_JOBS = 30
 COOLDOWN_HOURS = 2
 
 session = requests.session()
-session.headers.update({
-    'User-Agent': (
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-        ' AppleWebKit/537.36 (KHTML, like Gecko)'
-        ' Chrome/74.0.3729.169 Safari/537.36'
+session.headers.update(
+    {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+            " AppleWebKit/537.36 (KHTML, like Gecko)"
+            " Chrome/74.0.3729.169 Safari/537.36"
         )
-})
+    }
+)
 
-session.cookies = requests.utils.cookiejar_from_dict({
-    'ipb_pass_hash': os.getenv('IPB_PASS_HASH'),
-    'ipb_member_id': os.getenv('IPB_MEMBER_ID')
-})
+session.cookies = requests.utils.cookiejar_from_dict(
+    {
+        "ipb_pass_hash": os.getenv("IPB_PASS_HASH"),
+        "ipb_member_id": os.getenv("IPB_MEMBER_ID"),
+    }
+)
+
 
 def get_soup(url, params=None) -> BeautifulSoup:
     response = session.get(url, params=params)
     if response.status_code == 200:
-        return BeautifulSoup(response.content, 'html.parser')
-    raise ValueError(f"Request for [{url}] returned with status [{response.status_code}]")
-    #with open("/mnt/c/temp/cero.html") as f:
-        #return BeautifulSoup(f.read(), "html.parser")
-
+        return BeautifulSoup(response.content, "html.parser")
+    raise ValueError(
+        f"Request for [{url}] returned with status [{response.status_code}]"
+    )
+    # with open("/mnt/c/temp/cero.html") as f:
+    # return BeautifulSoup(f.read(), "html.parser")
 
 
 def get_current_limit():
-    soup = get_soup('https://e-hentai.org/home.php')
-    return int(soup.select_one('.homebox p strong').text)
+    soup = get_soup("https://e-hentai.org/home.php")
+    return int(soup.select_one(".homebox p strong").text)
 
 
 def download_image(job):
     try:
-        soup = get_soup(job['url'])
+        soup = get_soup(job["url"])
         try:
-            image_url = soup.select_one('#i7 a')['href']
+            image_url = soup.select_one("#i7 a")["href"]
             filename = None
         except TypeError:
-            image_url = soup.select_one('#i3 img')['src']
-            filename = image_url.split('/')[-1]
+            image_url = soup.select_one("#i3 img")["src"]
+            filename = image_url.split("/")[-1]
         logger.debug(
-            'Obtained URL for Gallery [%s], page [%d]: %s',
-            job['gallery_id'], job['page'],
-            image_url
+            "Obtained URL for Gallery [%s], page [%d]: %s",
+            job["gallery_id"],
+            job["page"],
+            image_url,
         )
         response = session.get(image_url, stream=True)
-        expected_size = int(response.headers['Content-Length'])
+        expected_size = int(response.headers["Content-Length"])
         if filename is None:
-            filename = response.headers['Content-Disposition'].split('=')[1]
+            filename = response.headers["Content-Disposition"].split("=")[1]
 
-        target_dir = os.path.join(os.getenv('VAULT_ROOT'), job['gallery_id'])
+        target_dir = os.path.join(os.getenv("VAULT_ROOT"), job["gallery_id"])
         os.makedirs(target_dir, exist_ok=True)
         filepath = os.path.join(target_dir, filename)
-        with open(filepath, 'wb') as out:
+        with open(filepath, "wb") as out:
             shutil.copyfileobj(response.raw, out)
         response.close()
         real_size = os.path.getsize(filepath)
         if real_size != expected_size:
-            raise ValueError(("Downloaded file does not have expected size. ",
-                f"Expected: {expected_size}. Real: {real_size}"))
-        db.galleries.update_one({'_id': job['gallery_id']}, {'$set': {f"pages.{job['page']}": filename}})
+            raise ValueError(
+                (
+                    "Downloaded file does not have expected size. ",
+                    f"Expected: {expected_size}. Real: {real_size}",
+                )
+            )
+        db.galleries.update_one(
+            {"_id": job["gallery_id"]}, {"$set": {f"pages.{job['page']}": filename}}
+        )
         return True
     except Exception as e:
         logger.error(e)
         return False
+
 
 def process_queued_jobs():
     now = datetime.datetime.now()
     queued_jobs = list(db.dl_queue.find({"scheduled": {"$lte": now}}).limit(50))
     current_limit = get_current_limit()
     if SOFT_LIMIT < current_limit + (ESTIMATED_PAGE_COST * len(queued_jobs)):
-        threading.Timer(datetime.timedelta(hours=COOLDOWN_HOURS).total_seconds(), process_queued_jobs).start()
+        threading.Timer(
+            datetime.timedelta(hours=COOLDOWN_HOURS).total_seconds(),
+            process_queued_jobs,
+        ).start()
         logger.info(
             "Reached soft limit at %d points. Stopping for %d hours",
             current_limit,
@@ -106,14 +122,16 @@ def process_queued_jobs():
             )
         logger.debug(message, job["gallery_id"], job["page"])
     if len(queued_jobs) > 0:
-        threading.Timer(datetime.timedelta(minutes=1).total_seconds(), process_queued_jobs).start()
+        threading.Timer(
+            datetime.timedelta(minutes=1).total_seconds(), process_queued_jobs
+        ).start()
 
 
 def queue_pages(url, gallery_id, max_chapter):
     now = datetime.datetime.now()
     for chapter in range(max_chapter):
         pages = []
-        soup = get_soup(url, {'p': chapter})
+        soup = get_soup(url, {"p": chapter})
         for a in soup.select("#gdt .gdtl a"):
             pages.append(
                 {
@@ -172,9 +190,7 @@ def save_gallery(url):
 
     gallery["category"] = soup.select_one("#gdc").text.lower()
 
-    db.galleries.update_one(
-        {"_id": gallery["_id"]}, {"$set": gallery}, upsert=True
-    )
+    db.galleries.update_one({"_id": gallery["_id"]}, {"$set": gallery}, upsert=True)
     for tag, groups in tag_index.items():
         push = {}
         for group in groups:
@@ -184,4 +200,4 @@ def save_gallery(url):
             {"_id": tag}, {"$set": {"_id": tag}, "$push": push}, upsert=True
         )
     max_chapter = int(soup.select_one(".ptt td:nth-last-child(2)").text)
-    queue_pages(url, gallery['_id'], max_chapter)
+    queue_pages(url, gallery["_id"], max_chapter)
