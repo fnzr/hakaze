@@ -112,10 +112,20 @@ module.exports = ({ production } = {}, { extractCss, analyze, tests, hmr, port, 
         host: host,
         proxy: {
             '/api': {
-                target: 'http://localhost:5000'
+                target: 'http://localhost:5000',
+                pathRewrite: {
+                    '^/api': ''
+                }
             },
             '/thumb': {
-                target: 'http://localhost:5000'
+                // No access to imageproxy during dev, so we have to use full images
+                // probably should fix this to run imageproxy standalone when possible
+                target: 'http://vault.sasuga.link:880',
+                pathRewrite: function (path, req) {
+                    // /thumb/[something]/
+                    const index = path.indexOf('/', 7);
+                    return path.substring(index);
+                }
             },
             '/vault': {
                 target: 'http://vault.sasuga.link:880',
