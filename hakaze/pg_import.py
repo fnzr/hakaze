@@ -2,6 +2,7 @@ import os
 import json
 import re
 import pymongo
+from .database import db
 
 mongo_uri = os.getenv("MONGO_URI")
 
@@ -23,7 +24,7 @@ def gallery_and_page_pg_json():
         all_galleries.append(g)
         # break
 
-    client.hakaze.galleries.insert_many(all_galleries)
+    db.galleries.insert_many(all_galleries)
 
 
 def tags_pg_json():
@@ -35,15 +36,15 @@ def tags_pg_json():
             entries[tag["name"]] = {"_id": tag["name"]}
         if tag["group"] not in entries[tag["name"]]:
             entries[tag["name"]][tag["group"]] = []
-        gallery = client.hakaze.galleries.find_one({"id": tag["id"]})
+        gallery = db.galleries.find_one({"id": tag["id"]})
         entries[tag["name"]][tag["group"]].append(gallery["_id"])
 
-    client.hakaze.tags.insert_many(entries.values())
-    #client.hakaze.galleries.update_many({}, {'$unset': {'id': True}})
+    db.tags.insert_many(entries.values())
+    # db.galleries.update_many({}, {'$unset': {'id': True}})
 
 
 def sync_gallery_tags():
-    tags = client.hakaze.tags.find()
+    tags = db.tags.find()
     entries = {}
     for tag in tags:
         for group in tag:
@@ -56,11 +57,11 @@ def sync_gallery_tags():
                     entries[gid][group] = []
                 entries[gid][group].append(tag["_id"])
     for _id, gtags in entries.items():
-        client.hakaze.galleries.update_one({"_id": _id}, {"$set": {"tags": gtags}})
+        db.galleries.update_one({"_id": _id}, {"$set": {"tags": gtags}})
 
 
 def break_piped_tags():
-    tags = client.hakaze.tags.find({"_id": re.compile(r"\|")})
+    tags = db.tags.find({"_id": re.compile(r"\|")})
     entries = {}
     for tag in tags:
         parts = tag["_id"].split("|")
@@ -74,7 +75,7 @@ def break_piped_tags():
                 for gid in tag[key]:
                     entries[part.strip()][key].append(gid)
     for _id, tags in entries.items():
-        tag_entry = client.hakaze.tags.find_one({"_id": _id})
+        tag_entry = db.tags.find_one({"_id": _id})
         if tag_entry is None:
             tag_entry = {"_id": _id}
         for group, gids in tags.items():
@@ -82,16 +83,26 @@ def break_piped_tags():
                 tag_entry[group] = []
             for gid in gids:
                 tag_entry[group].append(gid)
-        client.hakaze.tags.update_one({"_id": _id}, {"$set": tag_entry}, upsert=True)
-    client.hakaze.tags.delete_many({"_id": re.compile(r"\|")})
+        db.tags.update_one({"_id": _id}, {"$set": tag_entry}, upsert=True)
+    db.tags.delete_many({"_id": re.compile(r"\|")})
 
 
 def _id_to_dir():
-    galleries = client.hakaze.galleries.find()
+    galleries = db.galleries.find()
     for gallery in galleries:
         new_gallery = gallery
         new_gallery["_id"] = gallery["dir"]
         new_gallery["old_id"] = gallery["_id"]
         del new_gallery["dir"]
-        client.hakaze.galleries.delete_one({"_id": gallery["_id"]})
-        client.hakaze.galleries.insert_one(new_gallery)
+        db.galleries.delete_one({"_id": gallery["_id"]})
+        db.galleries.insert_one(new_gallery)
+
+
+def pages_object_to_array():
+    galleries = db.galleries.find({"pages": {"$type": "object"}})
+    for gallery in galleries:
+        for key, value in gallery["pages"].items():
+            db.galleries.update_one(
+                {"_id": gallery["_id"]},
+                {"$push": {"_pages": {"$each": [value], "$position": int(key)}}},
+            )
