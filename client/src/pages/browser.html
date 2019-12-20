@@ -4,7 +4,7 @@
     <require from="./pages.css"></require>
     <div class="top-box">
         <div if.bind="showSearchBox">
-            <input id="filter" type="text" placeholder="Search Keywords" size="50" value.bind="filter" />
+            <input type="text" placeholder="Search Keywords" size="50" value.bind="filter" />
             <input class="btn" type="button" value="Search" click.delegate="search()" />
             <input class="btn" type="button" value="Clear Filter" click.delegate="filter = ''" />
             <input class="btn" type="button" value="Hide search" click.delegate="showSearchBox = false" />
@@ -13,7 +13,16 @@
             </div>
         </div>
         <div else>
-            <input class="btn" type="button" value="Show search" click.delegate="showSearchBox = true" />
+            <div if.bind="showDownloadBox">
+                <input type="text" placeholder="Download URL" size="50" value.bind="downloadURL" />
+                <input class="btn" type="button" value="Download" click.delegate="download()" />
+                <input class="btn" type="button" value="Hide download" click.delegate="showDownloadBox = false" />
+            </div>
+            <div else>
+                <input class="btn" type="button" value="Show search" click.delegate="showSearchBox = true" />
+                <input class="btn" type="button" value="Show download" click.delegate="showDownloadBox = true" />
+                <input class="btn" type="button" value="Random mode" click.delegate="randomMode = true" />
+            </div>
         </div>
     </div>
     <div style="display:flex;">

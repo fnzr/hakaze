@@ -3,8 +3,10 @@ import api from '../api';
 export default class Browser {
 
     filter = '';
+    downloadURL = '';
     chapter = 1;
     lastChapter = 0;
+    randomMode = false;
 
     constructor() {
         this.covers = []
@@ -22,10 +24,15 @@ export default class Browser {
 
     async requestCovers() {
         this.covers.splice(0, 9);
-        const response = await api.post('covers', {
-            'skip': (this.chapter - 1) * 9,
-            'limit': 9
-        })
+        let response;
+        const args = { 'limit': 9 };
+        if (this.randomMode) {
+            args['random'] = true;
+        }
+        else {
+            args['skip'] = (this.chapter - 1) * 9;
+        }
+        response = await api.post('covers', args)
         this.covers.push(...(response.data.map(cover => {
             cover['url'] = `/thumb/300,fit/${cover.path}`
             return cover;
@@ -47,6 +54,13 @@ export default class Browser {
         await this.getGalleryCount()
         this.chapter = chapter;
         this.requestCovers()
+    }
+
+    async download() {
+        const response = await api.post('download-gallery', {
+            url: this.downloadURL
+        });
+        console.log(response)
     }
 
     onPointerDown(e) {

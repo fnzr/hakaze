@@ -1,7 +1,7 @@
-import os
 from pydantic import BaseModel
 from fastapi import APIRouter
 from .database import db
+from .exhentai import save_gallery
 
 router = APIRouter()
 
@@ -15,22 +15,33 @@ class PagesArgs(BaseModel):
 class CoverArgs(BaseModel):
     skip = 0
     limit = 20
+    random = False
+
+
+class DownloadArgs(BaseModel):
+    url: str
 
 
 @router.post("/covers")
 def covers(args: CoverArgs):
-    pipeline = [
-        {"$skip": args.skip},
-        {"$limit": args.limit},
-        {
-            "$project": {
-                "title": True,
-                "category": True,
-                "length": True,
-                "path": {"$concat": ["$_id", "/", {"$arrayElemAt": ["$pages", 0]}]},
-            }
-        },
-    ]
+    project = {
+        "$project": {
+            "title": True,
+            "category": True,
+            "length": True,
+            "path": {"$concat": ["$_id", "/", {"$arrayElemAt": ["$pages", 0]}]},
+            "updated": True,
+        }
+    }
+    if args.random:
+        pipeline = [{"$sample": {"size": args.limit}}, project]
+    else:
+        pipeline = [
+            {"$skip": args.skip},
+            {"$limit": args.limit},
+            {"$sort": {"updated": -1}},
+            project,
+        ]
     return list(db.galleries.aggregate(pipeline))
 
 
@@ -73,3 +84,8 @@ def gallery_data(gallery_id: str):
     gallery = db.galleries.find_one({"_id": gallery_id}, {"_id": False, "pages": False})
     result = {} if gallery is None else gallery
     return result
+
+
+@router.post("/download-gallery")
+def download_gallery(args: DownloadArgs):
+    save_gallery(args.url)
