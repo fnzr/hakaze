@@ -60,7 +60,7 @@ export default class Browser {
         const response = await api.post('download-gallery', {
             url: this.downloadURL
         });
-        console.log(response)
+        this.downloadURL = '';
     }
 
     onPointerDown(e) {
