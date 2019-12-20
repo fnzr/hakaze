@@ -86,7 +86,8 @@ def download_image(job):
                 )
             )
         db.galleries.update_one(
-            {"_id": job["gallery_id"]}, {"$set": {f"pages.{job['page']}": filename}}
+            {"_id": job["gallery_id"]},
+            {"$push": {"_pages": {"$each": [filename], "$position": int(job["page"])}}},
         )
         return True
     except Exception as e:
