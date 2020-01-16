@@ -1,77 +1,82 @@
+import os
 from pydantic import BaseModel
 from fastapi import APIRouter
+from starlette.requests import Request
+from starlette.responses import RedirectResponse
+from starlette.templating import Jinja2Templates
 from .database import db
+import hakaze.database as database
 from .exhentai import save_gallery
 
 router = APIRouter()
-
-
-class PagesArgs(BaseModel):
-    dir: str
-    skip = 0
-    limit = 20
-
-
-class CoverArgs(BaseModel):
-    skip = 0
-    limit = 20
-    random = False
+templates = Jinja2Templates(directory="templates")
+thumbnail_url = os.getenv("THUMB_URL")
+image_url = os.getenv("IMAGE_URL")
 
 
 class DownloadArgs(BaseModel):
     url: str
 
 
-@router.post("/covers")
-def covers(args: CoverArgs):
-    project = {
-        "$project": {
-            "title": True,
-            "category": True,
-            "length": True,
-            "path": {"$concat": ["$_id", "/", {"$arrayElemAt": ["$pages", 0]}]},
-            "updated": True,
-        }
-    }
-    if args.random:
-        pipeline = [{"$sample": {"size": args.limit}}, project]
-    else:
-        pipeline = [
-            {"$skip": args.skip},
-            {"$limit": args.limit},
-            {"$sort": {"updated": -1}},
-            project,
-        ]
-    return list(db.galleries.aggregate(pipeline))
-
-
-@router.post("/pages")
-def pages(args: PagesArgs):
-    pipeline = [
-        {"$match": {"_id": args.dir}},
+@router.get("/")
+async def index(request: Request, p: int = 0):
+    if p < 0:
+        return RedirectResponse(url=f"/?p=0")
+    covers = database.covers(p * 9, 9, False)
+    if not covers:
+        return RedirectResponse(url=f"/?p={p-1}")
+    return templates.TemplateResponse(
+        "index.j2",
         {
-            "$project": {
-                "filenames": {
-                    "$map": {
-                        "input": {"$slice": ["$pages", args.skip, args.limit]},
-                        "as": "page",
-                        "in": {"$concat": ["$_id", "/", "$$page",]},
-                    }
-                }
-            }
+            "request": request,
+            "covers": covers,
+            "current_page": p,
+            "thumbnail_url": thumbnail_url,
         },
-    ]
-    filenames = {}
+    )
+
+
+@router.get("/g/{gid}")
+async def g(request: Request, gid, p: int = 0):
+    if p < 0:
+        return RedirectResponse(url=f"/g/{gid}?p=0")
+    pages = database.pages(gid, p * 9, 9)
+    if not pages:
+        return RedirectResponse(url=f"/g/{gid}?p={p-1}")
+    return templates.TemplateResponse(
+        "gallery.j2",
+        {
+            "request": request,
+            "pages": pages,
+            "gid": gid,
+            "current_chapter": p,
+            "thumbnail_url": thumbnail_url,
+        },
+    )
+
+
+@router.get("/p/{gid}/{page}")
+async def p(request: Request, gid: str, page: int):
+    if page < 1:
+        return RedirectResponse(url=f"/p/{gid}/1")
     try:
-        filenames = db.galleries.aggregate(pipeline).next()["filenames"]
-    except StopIteration:
-        pass
-    result = {}
-    for index, filename in enumerate(filenames):
-        result[index + args.skip + 1] = filename
-    return result
+        page = database.pages(gid, page - 1, 1)[0]
+        base_url = f"/p/{gid}"
+        return templates.TemplateResponse(
+            "page.j2",
+            {
+                "request": request,
+                "base_url": base_url,
+                "page_number": page[0],
+                "page": page[1],
+                "image_url": image_url,
+            },
+        )
+    except IndexError:
+        return RedirectResponse(url=f"/p/{gid}/{page - 1}")
 
 
+"""
 @router.post("/count-galleries")
 def count_galleries():
     pipeline = [{"$count": "count"}]
@@ -84,6 +89,8 @@ def gallery_data(gallery_id: str):
     gallery = db.galleries.find_one({"_id": gallery_id}, {"_id": False, "pages": False})
     result = {} if gallery is None else gallery
     return result
+
+"""
 
 
 @router.post("/download-gallery")

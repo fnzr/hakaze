@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Hakaze</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="/static/styles.css" rel="stylesheet">
+</head>
+
+<body>
+    <div style="display:flex;">
+        <button class="button-page" onclick="location.href = '/g/{{gid}}?p={{current_chapter - 1}}'">&lt;</button>
+        <div id="pages-container">
+            {% for number, page in pages %}
+                <div class="cover-container" onclick="location.href = '/p/{{gid}}/{{number}}'">
+                    <div class="cover-image">
+                        <img src="{{ thumbnail_url }}{{ page }}" />
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        <button class="button-page button-page-right"
+        onclick="location.href = '/g/{{gid}}?p={{current_chapter + 1}}'">&gt;</button>
+    </div>
+</body>
+
+</html>

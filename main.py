@@ -11,7 +11,7 @@ app = create_app()
 if __name__ == "__main__":
     uvicorn.run(
         app,
-        host=os.getenv("UVICORN_HOST", "localhost"),
-        port=int(os.getenv("UVICORN_PORT", "5000")),
+        host=os.getenv("UVICORN_HOST", "0.0.0.0"),
+        port=int(os.getenv("UVICORN_PORT", "8080")),
         log_level="info",
     )
