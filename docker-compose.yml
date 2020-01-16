@@ -1,11 +1,17 @@
 version: '2'
 services:
   hakaze:
+    image: python:3.8
     restart: unless-stopped
-    build:
-      context: .
-      dockerfile: ./deploy/Dockerfile
     env_file: .env
+    working_dir: /app
+    volumes:
+        - python_modules:/usr/local/lib/python3.8
+        - ./hakaze:/app/hakaze
+        - ./static:/app/static
+        - ./templates:/app/templates
+        - ./requirements.txt:/app/requirements.txt
+    command: bash -c "pip install -r requirements.txt && uvicorn hakaze:create_app --host 0.0.0.0 --port 80"
   imgproxy:
     restart: unless-stopped
     depends_on:
@@ -45,3 +51,4 @@ services:
         MONGO_INITDB_ROOT_PASSWORD: root
 volumes:
     mongo_data:
+    python_modules:
