@@ -9,8 +9,12 @@
 </head>
 
 <body>
+    <div class="top-box">
+        <input class="btn" type="button" value="{{ 'Ordered' if random else 'Random' }} mode"
+        onclick="toggle_random()" />
+    </div>
     <div style="display:flex;">
-        <button class="button-page" onclick="location.href = '/?p={{current_page - 1}}'">&lt;</button>
+        <button class="button-page" onclick="change_page(-1)">&lt;</button>
         <div id="pages-container">
             {% for cover in covers %}
                 <div class="cover-container" onclick="window.open('/g/{{cover._id}}', '_blank');">
@@ -25,8 +29,27 @@
                 </div>
             {% endfor %}
         </div>
-        <button class="button-page" onclick="location.href = '/?p={{current_page + 1}}'">&gt;</button>
+        <button class="button-page" onclick="change_page(1)">&gt;</button>
     </div>
 </body>
+<script>
+function change_page(value) {
+    if ('{{ random }}' === 'True') {
+        location.href = '/?random=True'
+    }
+    else {
+        const next_page = {{current_page}} + value;
+        location.href = '/?p=' + next_page
+    }
+}
 
+function toggle_random() {
+    if ('{{ random }}' === 'True') {
+        location.href = '/'
+    }
+    else {
+        location.href = '/?random=True'
+    }
+}
+</script>
 </html>

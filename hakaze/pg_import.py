@@ -106,3 +106,6 @@ def pages_object_to_array():
                 {"_id": gallery["_id"]},
                 {"$push": {"_pages": {"$each": [value], "$position": int(key)}}},
             )
+    db.galleries.update_many({"_pages": {"$exists": True}}, {"$unset": {"pages": ''}})
+    db.galleries.update_many({"_pages": {"$exists": True}}, {"$rename": {"_pages": "pages"}})
+    db.galleries.update_many({"_pages": {"$exists": True}}, {"$unset": {"_pages": ''}})

@@ -20,10 +20,10 @@ class DownloadArgs(BaseModel):
 
 
 @router.get("/")
-async def index(request: Request, p: int = 0):
+async def index(request: Request, p: int = 0, random: bool = False):
     if p < 0:
         return RedirectResponse(url=f"/?p=0")
-    covers = database.covers(p * 9, 9, False)
+    covers = database.covers(p * 9, 9, random)
     if not covers:
         return RedirectResponse(url=f"/?p={p-1}")
     return templates.TemplateResponse(
@@ -33,6 +33,7 @@ async def index(request: Request, p: int = 0):
             "covers": covers,
             "current_page": p,
             "thumbnail_url": thumbnail_url,
+            "random": random
         },
     )
 
