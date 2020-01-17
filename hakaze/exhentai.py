@@ -4,6 +4,8 @@ import datetime
 import threading
 import logging
 import shutil
+import random
+import time
 import requests
 from bs4 import BeautifulSoup
 from .database import db
@@ -122,6 +124,7 @@ def process_queued_jobs():
                 {"_id": job["_id"]}, {"$set": {"scheduled": next_schedule}}
             )
         logger.debug(message, job["gallery_id"], job["page"])
+        time.sleep(random.uniform(2, 4))
     if len(queued_jobs) > 0:
         threading.Timer(
             datetime.timedelta(minutes=1).total_seconds(), process_queued_jobs

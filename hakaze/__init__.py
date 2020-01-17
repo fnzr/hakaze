@@ -2,6 +2,8 @@ from starlette.staticfiles import StaticFiles
 from fastapi import FastAPI
 from dotenv import load_dotenv
 
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+
 
 def create_app():
     load_dotenv()
