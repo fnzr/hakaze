@@ -58,3 +58,6 @@ def pages(dir, skip, limit):
     for index, filename in enumerate(filenames):
         result.append((index + skip + 1, filename))
     return result
+
+def gallery_title(gid):
+    return db.galleries.find_one({'_id': gid}, {'title': True})['title']

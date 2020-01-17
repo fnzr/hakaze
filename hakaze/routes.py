@@ -1,4 +1,5 @@
 import os
+import math
 from pydantic import BaseModel
 from fastapi import APIRouter
 from starlette.requests import Request
@@ -51,6 +52,7 @@ async def g(request: Request, gid, p: int = 0):
             "gid": gid,
             "current_chapter": p,
             "thumbnail_url": thumbnail_url,
+            "gallery_title": database.gallery_title(gid)
         },
     )
 
@@ -69,7 +71,9 @@ async def p(request: Request, gid: str, page: int):
                 "base_url": base_url,
                 "page_number": page[0],
                 "page": page[1],
+                "gallery_url": f"/g/{gid}?p={math.floor(page[0] / 9)}",
                 "image_url": image_url,
+                "gallery_title": database.gallery_title(gid)
             },
         )
     except IndexError:

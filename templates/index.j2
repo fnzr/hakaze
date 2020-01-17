@@ -13,7 +13,7 @@
         <button class="button-page" onclick="location.href = '/?p={{current_page - 1}}'">&lt;</button>
         <div id="pages-container">
             {% for cover in covers %}
-                <div class="cover-container" onclick="location.href = '/g/{{cover._id}}'">
+                <div class="cover-container" onclick="window.open('/g/{{cover._id}}', '_blank');">
                     <div class="title">{{ cover.title }}</div>
                     <div class="cover-image">
                         <img src="{{ thumbnail_url }}{{ cover.path }}" />

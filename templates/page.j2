@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Hakaze</title>
+    <title>{{ gallery_title }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="/static/styles.css" rel="stylesheet">
 </head>
@@ -11,7 +11,7 @@
 <body>
     <div style="display:flex;">
         <button class="button-page" onclick="location.href = '{{base_url}}/{{page_number - 1}}'">&lt;</button>
-        <div class="imgbox">
+        <div class="imgbox" onclick="location.href = '{{ gallery_url }}'">
             <img class="center-fit" src="{{ image_url }}{{ page }}" />
         </div>
         <button class="button-page button-page-right"
