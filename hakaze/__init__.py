@@ -1,3 +1,4 @@
+import logging
 from starlette.staticfiles import StaticFiles
 from fastapi import FastAPI
 from dotenv import load_dotenv
