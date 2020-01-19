@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from dotenv import load_dotenv
 
 logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("chardet").setLevel(logging.WARNING)
 
 
 def create_app():

@@ -115,15 +115,15 @@ def process_queued_jobs():
     for job in queued_jobs:
         success = download_image(job)
         if success:
-            message = "Done gallery [%s] page [%d]"
+            message = "Done page [%d] for gallery [%s] "
             db.dl_queue.delete_one({"_id": job["_id"]})
         else:
-            message = "Failed gallery [%s] page [%d]. Trying again after delay."
+            message = "Failed page [%d] for gallery [%s]. Trying again after delay."
             next_schedule = now + datetime.timedelta(minutes=10)
             db.dl_queue.update_one(
                 {"_id": job["_id"]}, {"$set": {"scheduled": next_schedule}}
             )
-        logger.debug(message, job["gallery_id"], job["page"])
+        logger.info(message, job["page"], job["gallery_id"])
         time.sleep(random.uniform(2, 4))
     if len(queued_jobs) > 0:
         threading.Timer(
