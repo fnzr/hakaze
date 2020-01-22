@@ -97,7 +97,7 @@ def download_image(job):
         return False
 
 
-def process_queued_jobs():
+def process_queued_jobs(schedule=True):
     now = datetime.datetime.now()
     queued_jobs = list(db.dl_queue.find({"scheduled": {"$lte": now}}).limit(50))
     current_limit = get_current_limit()
@@ -125,7 +125,7 @@ def process_queued_jobs():
             )
         logger.info(message, job["page"], job["gallery_id"])
         time.sleep(random.uniform(2, 4))
-    if len(queued_jobs) > 0:
+    if schedule and len(queued_jobs) > 0:
         threading.Timer(
             datetime.timedelta(minutes=1).total_seconds(), process_queued_jobs
         ).start()
