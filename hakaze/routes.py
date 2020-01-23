@@ -1,5 +1,6 @@
 import os
 import math
+from urllib.parse import urljoin
 from pydantic import BaseModel
 from fastapi import APIRouter
 from starlette.requests import Request
@@ -10,9 +11,10 @@ import hakaze.database as database
 from .exhentai import save_gallery
 
 router = APIRouter()
-templates = Jinja2Templates(directory="templates")
-thumbnail_url = os.getenv("THUMB_URL")
-image_url = os.getenv("IMAGE_URL")
+templates = Jinja2Templates(directory="hakaze/templates")
+
+thumbnail_url = f"{os.getenv('ASSETS_HOST')}/thumb/x285/"
+image_url = f"{os.getenv('ASSETS_HOST')}/vault/"
 
 
 class DownloadArgs(BaseModel):
@@ -33,7 +35,7 @@ async def index(request: Request, p: int = 0, random: bool = False):
             "covers": covers,
             "current_page": p,
             "thumbnail_url": thumbnail_url,
-            "random": random
+            "random": random,
         },
     )
 
@@ -53,7 +55,7 @@ async def g(request: Request, gid, p: int = 0):
             "gid": gid,
             "current_chapter": p,
             "thumbnail_url": thumbnail_url,
-            "gallery_title": database.gallery_title(gid)
+            "gallery_title": database.gallery_title(gid),
         },
     )
 
@@ -74,7 +76,7 @@ async def p(request: Request, gid: str, page: int):
                 "page": page[1],
                 "gallery_url": f"/g/{gid}?p={math.floor(page[0] / 9)}",
                 "image_url": image_url,
-                "gallery_title": database.gallery_title(gid)
+                "gallery_title": database.gallery_title(gid),
             },
         )
     except IndexError:
