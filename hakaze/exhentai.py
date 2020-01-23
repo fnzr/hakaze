@@ -21,7 +21,7 @@ COOLDOWN_HOURS = 2
 VAULT_ROOT = os.getenv("VAULT_ROOT")
 if not os.path.isdir(VAULT_ROOT):
     if os.path.isdir("/vault"):
-        logger.warn("VAULT_ROOT {} is not a dir. Defaulting to /vault.", VAULT_ROOT)
+        logger.warn("VAULT_ROOT %s is not a dir. Defaulting to /vault.", VAULT_ROOT)
         VAULT_ROOT = "/vault"
     else:
         raise ValueError("Neither VAULT_ROOT nor /vault exist.")

@@ -4,13 +4,8 @@ from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, ConfigurationError
 
 logger = logging.getLogger(__name__)
-try:
-    mongo = MongoClient(os.getenv("MONGO_URI"), connectTimeoutMS=3)
-    mongo.db.command('ismaster')
-except (ConnectionFailure, ConfigurationError):
-    logger.warn("Could not connect to MONGO_URI. Defaulting to localhost.")
-    mongo = MongoClient("mongodb://root:root@localhost:27017/hakaze", connectTimeoutMS=3)
-    mongo.db.command('ismaster')
+mongo = MongoClient(os.getenv("MONGO_URI"), connectTimeoutMS=3000)
+mongo.db.command('ismaster')
 
 db = mongo["hakaze"]
 
