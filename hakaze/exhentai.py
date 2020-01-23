@@ -18,6 +18,15 @@ ESTIMATED_PAGE_COST = 15
 BATCH_JOBS = 30
 COOLDOWN_HOURS = 2
 
+VAULT_ROOT = os.getenv("VAULT_ROOT")
+if not os.path.isdir(VAULT_ROOT):
+    if os.path.isdir("/vault"):
+        logger.warn("VAULT_ROOT {} is not a dir. Defaulting to /vault.", VAULT_ROOT)
+        VAULT_ROOT = "/vault"
+    else:
+        raise ValueError("Neither VAULT_ROOT nor /vault exist.")
+
+
 session = requests.session()
 session.headers.update(
     {
@@ -73,7 +82,7 @@ def download_image(job):
         if filename is None:
             filename = response.headers["Content-Disposition"].split("=")[1]
 
-        target_dir = os.path.join(os.getenv("VAULT_ROOT"), job["gallery_id"])
+        target_dir = os.path.join(VAULT_ROOT, job["gallery_id"])
         os.makedirs(target_dir, exist_ok=True)
         filepath = os.path.join(target_dir, filename)
         with open(filepath, "wb") as out:
