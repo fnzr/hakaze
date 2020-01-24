@@ -9,14 +9,25 @@
 </head>
 
 <body>
-    <div style="display:flex;">
-        <button class="button-page" onclick="location.href = '{{base_url}}/{{page_number - 1}}'">&lt;</button>
-        <div class="imgbox" onclick="location.href = '{{ gallery_url }}'">
-            <img class="center-fit" src="{{ image_url }}{{ page }}" />
+    <form style="display:inherit;" id="form-page">
+        <div style="display:flex;">
+            <button type="button" class="button-page" onclick="doSubmit(-1)">&lt;</button>
+            <div class="imgbox" onclick="doSubmit(1)">
+                <img class="center-fit" src="{{ image_url }}{{ page }}" />
+            </div>
         </div>
-        <button class="button-page button-page-right"
-        onclick="location.href = '{{base_url}}/{{page_number + 1}}'">&gt;</button>
-    </div>
+        <div>
+        <script>
+        function doSubmit(move) {
+            const form = document.querySelector('#form-page')
+            form.action = "{{base_url}}/" + ({{ page_number }} + move)
+            form.submit()
+        }
+        </script>
+    </form>
+    <form action="{{ gallery_url }}">
+        <button type="submit">To Chapter Selection</button>
+    </form>
 </body>
 
 </html>
