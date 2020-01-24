@@ -4,8 +4,11 @@ from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, ConfigurationError
 
 logger = logging.getLogger(__name__)
-mongo = MongoClient(os.getenv("MONGO_URI"), connectTimeoutMS=3000)
-mongo.db.command('ismaster')
+try:
+    mongo = MongoClient(os.getenv("MONGO_URI"), serverSelectionTimeoutMS=1000)
+    mongo.db.command("ismaster")
+except (ConnectionFailure, ConfigurationError):
+    logger.warn("Could not connect to mongo database.")
 
 db = mongo["hakaze"]
 
@@ -16,13 +19,7 @@ def covers(skip, limit, random=False):
             "title": True,
             "category": True,
             "length": True,
-            "path": {
-                "$concat": [
-                    "$_id",
-                    "/",
-                    {"$arrayElemAt": ["$pages", 0]},
-                ]
-            },
+            "path": {"$concat": ["$_id", "/", {"$arrayElemAt": ["$pages", 0]},]},
             "updated": True,
         }
     }
@@ -63,5 +60,6 @@ def pages(dir, skip, limit):
         result.append((index + skip + 1, filename))
     return result
 
+
 def gallery_title(gid):
-    return db.galleries.find_one({'_id': gid}, {'title': True})['title']
+    return db.galleries.find_one({"_id": gid}, {"title": True})["title"]
