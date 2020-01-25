@@ -65,7 +65,8 @@ if __name__ == "__main__":
     elif args.work:
         hakaze.exhentai.process_queued_jobs(False)
     elif args.download:
-        hakaze.exhentai.save_gallery(args.download)
+        from hakaze import exhentai
+        exhentai.save_gallery(args.download)
     elif args.backup:
         backup_db()
     elif args.restore:
