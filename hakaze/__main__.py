@@ -45,7 +45,6 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--serve", action="store_true", dest="serve")
 
     parser.add_argument("--fix-db-array", action="store_true")
-    parser.add_argument("--work", action="store_true")
 
     parser.add_argument("--run", nargs="+")
 
@@ -60,10 +59,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.serve:
         print("uvicorn hakaze.server:app --host 0.0.0.0 --port 8080 --reload")
-    elif args.fix_db_array:
-        hakaze.database.pages_object_to_array()
-    elif args.work:
-        hakaze.exhentai.process_queued_jobs(False)
     elif args.download:
         from hakaze import exhentai
         exhentai.save_gallery(args.download)
