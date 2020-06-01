@@ -129,7 +129,7 @@ input {
 .imgbox {
     display: grid;
     height: 100%;
-    margin-left: auto;
+    margin: auto;
 }
 .center-fit {
     max-width: 100%;
