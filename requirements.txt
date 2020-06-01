@@ -8,3 +8,4 @@ uvicorn
 fastapi
 jinja2
 aiofiles
+sqlitedict
