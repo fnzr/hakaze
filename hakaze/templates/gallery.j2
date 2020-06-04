@@ -10,18 +10,18 @@
 
 <body>
     <div style="display:flex;">
-        <button class="button-page" onclick="location.href = '/g/{{gid}}?p={{current_chapter - 1}}'">&lt;</button>
+        <button class="button-page" onclick="location.href = '/g/{{dirname}}?p={{current_chapter - 1}}'">&lt;</button>
         <div id="pages-container">
             {% for number, page in pages %}
-                <div class="cover-container" onclick="location.href = '/p/{{gid}}/{{number}}'">
+                <div class="cover-container" onclick="location.href = '/p/{{dirname}}/{{number + 1}}'">
                     <div class="cover-image">
-                        <img src="{{ thumbnail_url }}{{ page }}" />
+                        <img src="{{ page }}" />
                     </div>
                 </div>
             {% endfor %}
         </div>
         <button class="button-page button-page-right"
-        onclick="location.href = '/g/{{gid}}?p={{current_chapter + 1}}'">&gt;</button>
+        onclick="location.href = '/g/{{dirname}}?p={{current_chapter + 1}}'">&gt;</button>
     </div>
 </body>
 

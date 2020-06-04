@@ -8,13 +8,14 @@ import random
 import time
 import json
 import requests
-from sqlitedict import SqliteDict
 from bs4 import BeautifulSoup
+from . import database
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 logging.basicConfig(level=logging.DEBUG)
 
+"""
 VAULT_ROOT = os.getenv("VAULT_ROOT")
 if not os.path.isdir(VAULT_ROOT):
     if os.path.isdir("/vault"):
@@ -22,7 +23,7 @@ if not os.path.isdir(VAULT_ROOT):
         VAULT_ROOT = "/vault"
     else:
         raise ValueError("Neither VAULT_ROOT nor /vault exist.")
-
+"""
 
 session = requests.session()
 session.headers.update(
@@ -134,6 +135,7 @@ def save_gallery(url):
         "url": url,
         "created": now,
         "updated": now,
+        "done": False
     }
 
     soup = get_soup(url)
@@ -148,10 +150,12 @@ def save_gallery(url):
     gallery["category"] = soup.select_one("#gdc").text.lower()
 
     torrent_file = decide_torrent_file(soup)
+    """ dunno how to save this
     if torrent_file:
         gallery["torrent"] = torrent_file
-        with SqliteDict(os.getenv("DATABASE_FILE")) as db:
-            if url in db:
-                logger.warn("URL already existed in database")
-            db[url] = gallery
-            db.commit()
+        db = database.get_db()
+        if url in db:
+            logger.warn("URL already existed in database")
+        db[url] = gallery
+        db.commit()
+    """

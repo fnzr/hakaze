@@ -50,6 +50,10 @@ if __name__ == "__main__":
 
     parser.add_argument("-d", "--download")
 
+    parser.add_argument("-n", "--ndownload")
+
+    parser.add_argument("-p", "--npage")
+
     parser.add_argument("--backup", action="store_true")
 
     parser.add_argument("--restore")
@@ -62,6 +66,10 @@ if __name__ == "__main__":
     elif args.download:
         from hakaze import exhentai
         exhentai.save_gallery(args.download)
+    elif args.ndownload:
+        from hakaze import nhentai
+        page = int(args.npage) if args.npage else 1
+        nhentai.save_gallery(args.ndownload, page)
     elif args.backup:
         backup_db()
     elif args.restore:

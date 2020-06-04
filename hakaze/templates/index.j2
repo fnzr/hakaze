@@ -17,13 +17,12 @@
         <button class="button-page" onclick="change_page(-1)">&lt;</button>
         <div id="pages-container">
             {% for cover in covers %}
-                <div class="cover-container" onclick="window.open('/g/{{cover._id}}', '_blank');">
+                <div class="cover-container" onclick="window.open('/g/{{cover.title}}', '_blank');">
                     <div class="title">{{ cover.title }}</div>
                     <div class="cover-image">
-                        <img src="{{ thumbnail_url }}{{ cover.path }}" />
+                        <img src="{{ cover.url }}" />
                     </div>
                     <div class="info">
-                        <div>{{ cover.category }}</div>
                         <div>{{ cover.length }} pages</div>
                     </div>
                 </div>
